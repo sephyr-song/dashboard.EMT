@@ -3,14 +3,14 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ArcGIS Dashboard EMT</title>
+  <title>ArcGIS EMT Dashboard</title>
   <style>
     html, body {
       margin: 0;
       padding: 0;
       height: 100%;
       overflow: hidden;
-      background: #000; /* optional: black background */
+      background: #000;
     }
     iframe {
       width: 100%;
@@ -28,11 +28,12 @@
   ></iframe>
 
   <script>
-    // Refresh iframe every 1 minutes (60000 ms)
+    // Soft refresh every 1 minute (60000 ms)
     setInterval(() => {
       const iframe = document.getElementById('dashboardFrame');
-      iframe.src = iframe.src;
-    }, 60000); // 60000 ms = 1 minutes
+      const baseUrl = "https://www.arcgis.com/apps/dashboards/5bf4a19249de468095a6ddfbd6b7a310";
+      iframe.src = baseUrl + "?t=" + new Date().getTime();
+    }, 60000);
   </script>
 </body>
 </html>
