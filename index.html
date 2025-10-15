@@ -71,6 +71,37 @@
       animation: dots 1.5s steps(4, end) infinite;
     }
 
+    /* 🧠 Status Refresh Indicator */
+    .status-indicator {
+      position: fixed;
+      right: 10px;
+      bottom: 10px;
+      background: rgba(30, 30, 30, 0.8);
+      color: #ddd;
+      font-size: 12px;
+      padding: 6px 10px;
+      border-radius: 6px;
+      z-index: 1000;
+      transition: background 0.3s ease, color 0.3s ease;
+      user-select: none;
+      pointer-events: none;
+    }
+
+    .status-indicator.active {
+      background: rgba(46, 204, 113, 0.8);
+      color: #fff;
+    }
+
+    .status-indicator.idle {
+      background: rgba(241, 196, 15, 0.8);
+      color: #111;
+    }
+
+    .status-indicator.refreshing {
+      background: rgba(52, 152, 219, 0.9);
+      color: #fff;
+    }
+
     /* Animasi */
     @keyframes pulse {
       0%, 100% { transform: scale(1); opacity: 1; }
@@ -101,54 +132,87 @@
       allowfullscreen
       sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
     ></iframe>
+
+    <!-- 🧠 Status Indicator -->
+    <div id="statusIndicator" class="status-indicator">🟢 Active - No auto refresh</div>
   </div>
 
   <script>
     const dashboardURL = "https://www.arcgis.com/apps/dashboards/5bf4a19249de468095a6ddfbd6b7a310";
     const iframe = document.getElementById('dashboardFrame');
     const loader = document.getElementById('loader');
+    const status = document.getElementById('statusIndicator');
 
     const refreshInterval = 60000; // 1 menit
-    const idleThreshold = 30000; // user idle setelah 30 detik
+    const idleThreshold = 180000;  // 3 menit idle = refresh aktif
 
     let userActive = true;
+    let tabActive = true;
     let lastActivity = Date.now();
+
+    function setStatus(state, text) {
+      status.className = `status-indicator ${state}`;
+      status.textContent = text;
+    }
 
     // Fungsi reload dengan efek loading custom
     function reloadDashboard() {
+      setStatus("refreshing", "🔄 Refreshing dashboard...");
       loader.style.display = "flex";
       iframe.style.opacity = 0;
       iframe.src = dashboardURL + "?t=" + new Date().getTime();
     }
 
-    // Ketika iframe selesai load
+    // Saat iframe selesai dimuat
     iframe.addEventListener('load', () => {
       setTimeout(() => {
         loader.style.display = "none";
         iframe.style.opacity = 1;
-      }, 600); // transisi halus
+        setStatus(userActive && tabActive ? "active" : "idle",
+          userActive && tabActive ? "🟢 Active - No auto refresh" :
+          "🟡 Idle - Auto refresh active"
+        );
+      }, 600);
     });
 
-    // Deteksi interaksi pengguna
+    // Reset aktivitas user
     function resetUserActivity() {
       userActive = true;
       lastActivity = Date.now();
+      if (tabActive) setStatus("active", "🟢 Active - No auto refresh");
     }
 
+    // Deteksi aktivitas pengguna
     ['mousemove', 'mousedown', 'click', 'scroll', 'keypress', 'touchstart'].forEach(evt => {
       document.addEventListener(evt, resetUserActivity, { passive: true });
     });
 
-    // Deteksi apakah user idle
+    // Deteksi fokus/blur tab browser
+    window.addEventListener('focus', () => {
+      tabActive = true;
+      resetUserActivity();
+    });
+    window.addEventListener('blur', () => {
+      tabActive = false;
+      setStatus("idle", "🟡 Tab inactive - Auto refresh active");
+    });
+
+    // Pantau apakah user idle
     setInterval(() => {
       const now = Date.now();
       const idleTime = now - lastActivity;
-      if (idleTime > idleThreshold) userActive = false;
+      userActive = idleTime < idleThreshold;
+
+      if (!userActive && tabActive) {
+        setStatus("idle", "🟡 Idle - Auto refresh active");
+      }
     }, 1000);
 
-    // Jalankan auto-refresh hanya jika user idle
+    // Jalankan refresh hanya jika tab tidak aktif ATAU user idle lama
     setInterval(() => {
-      if (!userActive) reloadDashboard();
+      if (!tabActive || !userActive) {
+        reloadDashboard();
+      }
     }, refreshInterval);
   </script>
 </body>
