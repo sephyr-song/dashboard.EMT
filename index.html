@@ -43,7 +43,6 @@
       z-index: 999;
     }
 
-    /* 🟠 Logo MDMC */
     .loader-logo {
       width: 90px;
       height: 90px;
@@ -53,7 +52,6 @@
       margin-bottom: 18px;
     }
 
-    /* 💬 Loading Text */
     .loader-text {
       color: #f1f1f1;
       font-size: 1rem;
@@ -62,7 +60,6 @@
       align-items: center;
     }
 
-    /* ✨ Animasi titik-titik berjalan */
     .dots::after {
       content: '';
       display: inline-block;
@@ -149,13 +146,14 @@
     let userActive = true;
     let tabActive = true;
     let lastActivity = Date.now();
+    let mouseOverIframe = false; // 🔍 Tambahan: deteksi mouse di area iframe
 
     function setStatus(state, text) {
       status.className = `status-indicator ${state}`;
       status.textContent = text;
     }
 
-    // Fungsi reload dengan efek loading custom
+    // 🔄 Fungsi reload dengan efek loading custom
     function reloadDashboard() {
       setStatus("refreshing", "🔄 Refreshing dashboard...");
       loader.style.display = "flex";
@@ -163,7 +161,7 @@
       iframe.src = dashboardURL + "?t=" + new Date().getTime();
     }
 
-    // Saat iframe selesai dimuat
+    // 🎯 Saat iframe selesai dimuat
     iframe.addEventListener('load', () => {
       setTimeout(() => {
         loader.style.display = "none";
@@ -175,19 +173,32 @@
       }, 600);
     });
 
-    // Reset aktivitas user
+    // 🔁 Reset aktivitas user
     function resetUserActivity() {
       userActive = true;
       lastActivity = Date.now();
       if (tabActive) setStatus("active", "🟢 Active - No auto refresh");
     }
 
-    // Deteksi aktivitas pengguna
+    // 🖱️ Deteksi aktivitas pengguna di parent document
     ['mousemove', 'mousedown', 'click', 'scroll', 'keypress', 'touchstart'].forEach(evt => {
       document.addEventListener(evt, resetUserActivity, { passive: true });
     });
 
-    // Deteksi fokus/blur tab browser
+    // 🧭 Tambahan: deteksi aktivitas mouse di area iframe (walau tidak di dalamnya)
+    iframe.addEventListener('mouseenter', () => {
+      mouseOverIframe = true;
+      resetUserActivity();
+    });
+    iframe.addEventListener('mousemove', () => {
+      mouseOverIframe = true;
+      resetUserActivity();
+    });
+    iframe.addEventListener('mouseleave', () => {
+      mouseOverIframe = false;
+    });
+
+    // 👁️ Deteksi fokus/blur tab browser
     window.addEventListener('focus', () => {
       tabActive = true;
       resetUserActivity();
@@ -197,23 +208,30 @@
       setStatus("idle", "🟡 Tab inactive - Auto refresh active");
     });
 
-    // Pantau apakah user idle
+    // 🕒 Pantau status idle
     setInterval(() => {
       const now = Date.now();
       const idleTime = now - lastActivity;
       userActive = idleTime < idleThreshold;
 
-      if (!userActive && tabActive) {
+      if (!userActive && tabActive && !mouseOverIframe) {
         setStatus("idle", "🟡 Idle - Auto refresh active");
       }
     }, 1000);
 
-    // Jalankan refresh hanya jika tab tidak aktif ATAU user idle lama
+    // ⏱️ Jalankan refresh otomatis hanya jika:
+    // tab tidak aktif, atau user idle lama, dan mouse tidak di atas iframe
     setInterval(() => {
-      if (!tabActive || !userActive) {
+      if ((!tabActive || !userActive) && !mouseOverIframe) {
         reloadDashboard();
       }
     }, refreshInterval);
+
+    // 🌙 Deteksi perubahan visibilitas tab (misal minimize)
+    document.addEventListener("visibilitychange", () => {
+      tabActive = !document.hidden;
+      if (tabActive) resetUserActivity();
+    });
   </script>
 </body>
 </html>
